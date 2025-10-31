@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "637925982759",
+    "project_id": "banbanhkem-91d4e",
+    "storage_bucket": "banbanhkem-91d4e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:637925982759:android:ce9e265b22aca5c58d0402",
+        "android_client_info": {
+          "package_name": "com.example.doan_nhom5"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsse1iXfdFmkl_DElWDx1NhsTJ_2X3K5U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
