@@ -1,3 +1,4 @@
+// lib/screens/cake_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -50,12 +51,16 @@ class _CakeDetailsScreenState extends State<CakeDetailsScreen> {
                 expandedHeight: 300,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  title: Text(cake.name),
+                  // ĐÃ XÓA: title: Text(cake.name) để xóa chữ overlay trên hình
                   background: Hero(
                     tag: 'cake-${cake.id}',
                     child: CachedNetworkImage(
                       imageUrl: cake.image,
                       fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          Container(color: Colors.grey[200]),
+                      errorWidget: (context, url, error) =>
+                          Icon(Icons.cake, size: 100),
                     ),
                   ),
                 ),

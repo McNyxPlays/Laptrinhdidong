@@ -35,7 +35,8 @@ class _MainScreenState extends State<MainScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final user = auth.user;
 
-    if (user == null && index != 0) {
+    if (user == null && (index == 1 || index == 3 || index == 4)) {
+      // Chỉ yêu cầu login cho yêu thích, đơn hàng, hồ sơ
       Navigator.pushNamed(context, '/login');
       return;
     }

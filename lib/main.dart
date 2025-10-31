@@ -8,9 +8,13 @@ import 'providers/favorite_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/main_screen.dart';
 import 'screens/cake_details_screen.dart';
+import 'screens/cake_cart_screen.dart'; // THÊM
+import 'screens/cake_favorites_screen.dart'; // THÊM
 import 'screens/cake_checkout_screen.dart';
 import 'screens/user_login_screen.dart';
 import 'screens/user_register_screen.dart';
+import 'screens/user_profile_screen.dart'; // THÊM
+import 'screens/order_history_screen.dart'; // THÊM
 import 'screens/order_status_screen.dart';
 import 'screens/admin_cake_screen.dart';
 
@@ -35,6 +39,10 @@ class MyApp extends StatelessWidget {
         home: MainScreen(),
         routes: {
           '/details': (_) => CakeDetailsScreen(),
+          '/favorites': (_) => FavoritesScreen(),
+          '/cart': (_) => CartScreen(),
+          '/orders': (_) => OrderHistoryScreen(),
+          '/profile': (_) => UserProfileScreen(),
           '/checkout': (_) => CheckoutScreen(),
           '/login': (_) => LoginScreen(),
           '/register': (_) => RegisterScreen(),

@@ -140,15 +140,7 @@ class _CakeListScreenState extends State<CakeListScreen> {
                     itemCount: cakes.length,
                     itemBuilder: (context, index) {
                       final cake = cakes[index];
-                      final isFavorite = favoriteProvider.isFavorite(cake.id);
-                      return _buildCakeCard(
-                        context,
-                        cake,
-                        isFavorite,
-                        favoriteProvider,
-                        cartProvider,
-                        authProvider.user != null,
-                      );
+                      return _buildCakeCard(context, cake);
                     },
                   );
                 },
@@ -172,14 +164,7 @@ class _CakeListScreenState extends State<CakeListScreen> {
     );
   }
 
-  Widget _buildCakeCard(
-    BuildContext context,
-    Cake cake,
-    bool isFavorite,
-    FavoriteProvider fp,
-    CartProvider cp,
-    bool isLoggedIn,
-  ) {
+  Widget _buildCakeCard(BuildContext context, Cake cake) {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, '/details', arguments: cake.id),
       child: Card(
@@ -214,31 +199,6 @@ class _CakeListScreenState extends State<CakeListScreen> {
               ),
               Text(cake.name, style: TextStyle(fontWeight: FontWeight.bold)),
               Text('${cake.price} VNĐ'),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.add_shopping_cart),
-                    onPressed: () async {
-                      await cp.addToCart(cake.id, 'Nhỏ', 1);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Đã thêm ${cake.name}'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                  ),
-                  if (isLoggedIn)
-                    IconButton(
-                      icon: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite ? Colors.red : null,
-                      ),
-                      onPressed: () async => await fp.toggleFavorite(cake.id),
-                    ),
-                ],
-              ),
             ],
           ),
         ),
@@ -266,17 +226,19 @@ class _CakeListScreenState extends State<CakeListScreen> {
             leading: Icon(Icons.favorite),
             title: Text('Yêu thích'),
             onTap: () {
-              if (auth.user == null) {
+              if (auth.user == null)
                 Navigator.pushNamed(context, '/login');
-              } else {
+              else
                 Navigator.pushNamed(context, '/favorites');
-              }
             },
           ),
           ListTile(
             leading: Icon(Icons.shopping_cart),
             title: Text('Giỏ hàng'),
-            onTap: () => Navigator.pushNamed(context, '/cart'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/cart');
+            },
           ),
           ListTile(
             leading: Icon(Icons.account_circle),

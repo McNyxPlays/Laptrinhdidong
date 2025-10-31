@@ -19,14 +19,15 @@ class CartProvider with ChangeNotifier {
   }
 
   Future<void> addToCart(String cakeId, String size, int quantity) async {
+    final cake = await FirebaseService.getCakeById(cakeId);
+    final multiplier = {'Nhỏ': 1.0, 'Trung bình': 1.5, 'Lớn': 2.0}[size] ?? 1.0;
+    final price = (cake.price * multiplier).toInt();
+
     if (FirebaseService.currentUser != null) {
       await FirebaseService.addToCart(cakeId, size, quantity);
       await fetchCart();
     } else {
-      final cake = await FirebaseService.getCakeById(cakeId);
-      final multiplier =
-          {'Nhỏ': 1.0, 'Trung bình': 1.5, 'Lớn': 2.0}[size] ?? 1.0;
-      final price = (cake.price * multiplier).toInt();
+      // Guest: Local cart
       final existing = _items.firstWhere(
         (i) => i['cakeId'] == cakeId && i['size'] == size,
         orElse: () => {},
@@ -75,7 +76,6 @@ class CartProvider with ChangeNotifier {
       fetchCart();
     } else {
       _items.removeWhere((i) => i['cakeId'] == cakeId && i['size'] == size);
-      // SỬA DÒNG NÀY
       _total = _items.map((i) => i['subtotal'] as int).sum;
       notifyListeners();
     }

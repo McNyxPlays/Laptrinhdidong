@@ -1,7 +1,8 @@
+// lib/services/firebase_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
-import 'package:collection/collection.dart'; // THÊM ĐỂ SỬ DỤNG .sum
+import 'package:collection/collection.dart';
 import '../models/cake.dart';
 
 class FirebaseService {
@@ -66,6 +67,9 @@ class FirebaseService {
 
   static Future<Cake> getCakeById(String id) async {
     final doc = await _firestore.collection('cakes').doc(id).get();
+    if (!doc.exists) {
+      throw 'Cake not found';
+    }
     return Cake.fromJson(doc.data()!);
   }
 
@@ -76,14 +80,14 @@ class FirebaseService {
         .collection('users')
         .doc(currentUser!.uid)
         .get();
-    return List<String>.from(doc['favorites'] ?? []);
+    return List<String>.from(doc.data()!['favorites'] ?? []);
   }
 
   static Future<void> toggleFavorite(String cakeId) async {
     if (currentUser == null) return;
     final ref = _firestore.collection('users').doc(currentUser!.uid);
     final doc = await ref.get();
-    List<String> favs = List<String>.from(doc['favorites'] ?? []);
+    List<String> favs = List<String>.from(doc.data()!['favorites'] ?? []);
     favs.contains(cakeId) ? favs.remove(cakeId) : favs.add(cakeId);
     await ref.update({'favorites': favs});
   }
@@ -95,6 +99,7 @@ class FirebaseService {
         .collection('carts')
         .doc(currentUser!.uid)
         .get();
+    if (!doc.exists) return {'items': [], 'total': 0};
     return doc.data() ?? {'items': [], 'total': 0};
   }
 
@@ -103,10 +108,10 @@ class FirebaseService {
     String size,
     int quantity,
   ) async {
-    if (currentUser == null) return;
+    if (currentUser == null) return; // Guest dùng local
     final ref = _firestore.collection('carts').doc(currentUser!.uid);
     final doc = await ref.get();
-    List items = doc['items'] ?? [];
+    List items = doc.exists ? (doc.data()!['items'] ?? []) : [];
     final cake = await getCakeById(cakeId);
     final multiplier = {'Nhỏ': 1.0, 'Trung bình': 1.5, 'Lớn': 2.0}[size] ?? 1.0;
     final price = (cake.price * multiplier).toInt();
@@ -129,7 +134,6 @@ class FirebaseService {
         'subtotal': quantity * price,
       });
     }
-    // SỬA: Thay fold bằng map.sum với cast int
     int total = items.map((i) => i['subtotal'] as int).sum;
     await ref.set({'items': items, 'total': total});
   }
@@ -142,30 +146,30 @@ class FirebaseService {
     if (currentUser == null) return;
     final ref = _firestore.collection('carts').doc(currentUser!.uid);
     final doc = await ref.get();
-    List items = doc['items'] ?? [];
+    List items = doc.exists ? (doc.data()!['items'] ?? []) : [];
     final item = items.firstWhere(
       (i) => i['cakeId'] == cakeId && i['size'] == size,
+      orElse: () => null,
     );
+    if (item == null) return;
     if (quantity <= 0) {
       items.remove(item);
     } else {
       item['quantity'] = quantity;
       item['subtotal'] = quantity * item['price'];
     }
-    // SỬA: Thay fold bằng map.sum với cast int
     int total = items.map((i) => i['subtotal'] as int).sum;
-    await ref.update({'items': items, 'total': total});
+    await ref.set({'items': items, 'total': total});
   }
 
   static Future<void> removeCartItem(String cakeId, String size) async {
     if (currentUser == null) return;
     final ref = _firestore.collection('carts').doc(currentUser!.uid);
     final doc = await ref.get();
-    List items = doc['items'] ?? [];
+    List items = doc.exists ? (doc.data()!['items'] ?? []) : [];
     items.removeWhere((i) => i['cakeId'] == cakeId && i['size'] == size);
-    // SỬA: Thay fold bằng map.sum với cast int
     int total = items.map((i) => i['subtotal'] as int).sum;
-    await ref.update({'items': items, 'total': total});
+    await ref.set({'items': items, 'total': total});
   }
 
   static Future<void> clearCart() async {
