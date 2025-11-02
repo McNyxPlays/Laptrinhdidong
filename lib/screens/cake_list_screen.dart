@@ -1,11 +1,10 @@
-// lib/screens/cake_list_screen.dart (Sửa drawer cho guest vào giỏ hàng)
+// lib/screens/cake_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/cake.dart';
 import '../services/firebase_service.dart';
 import '../providers/favorite_provider.dart';
-import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
 import 'admin_cake_screen.dart';
 import 'admin_dashboard_screen.dart';
@@ -29,14 +28,12 @@ class _CakeListScreenState extends State<CakeListScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.user != null) {
       Provider.of<FavoriteProvider>(context, listen: false).fetchFavorites();
-      Provider.of<CartProvider>(context, listen: false).fetchCart();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final favoriteProvider = Provider.of<FavoriteProvider>(context);
-    final cartProvider = Provider.of<CartProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
@@ -55,6 +52,7 @@ class _CakeListScreenState extends State<CakeListScreen> {
         ),
         child: Column(
           children: [
+            // Tìm kiếm
             Padding(
               padding: EdgeInsets.all(10),
               child: TextField(
@@ -71,6 +69,8 @@ class _CakeListScreenState extends State<CakeListScreen> {
                 onChanged: (value) => setState(() => _searchQuery = value),
               ),
             ),
+
+            // Bộ lọc + sắp xếp
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 10),
               child: Row(
@@ -78,21 +78,7 @@ class _CakeListScreenState extends State<CakeListScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildCategoryChip('All'),
-                          _buildCategoryChip('Socola'),
-                          _buildCategoryChip('Dâu'),
-                          _buildCategoryChip('Vani'),
-                          _buildCategoryChip('Matcha'),
-                          _buildCategoryChip('Tiramisu'),
-                          _buildCategoryChip('Chanh Leo'),
-                          _buildCategoryChip('Red Velvet'),
-                          _buildCategoryChip('Caramen'),
-                          _buildCategoryChip('Trái Cây'),
-                          _buildCategoryChip('Bắp'),
-                        ],
-                      ),
+                      child: Row(children: _buildCategoryChips()),
                     ),
                   ),
                   IconButton(
@@ -105,20 +91,21 @@ class _CakeListScreenState extends State<CakeListScreen> {
                 ],
               ),
             ),
+
+            // Danh sách bánh
             Expanded(
               child: FutureBuilder<List<Cake>>(
                 future: _cakesFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
-                  if (snapshot.hasError)
+                  }
+                  if (snapshot.hasError) {
                     return Center(child: Text('Lỗi: ${snapshot.error}'));
-                  List<Cake> cakes = snapshot.data ?? [];
-                  if (_selectedCategory != 'All')
-                    cakes = cakes
-                        .where((c) => c.category == _selectedCategory)
-                        .toList();
-                  if (_searchQuery.isNotEmpty)
+                  }
+
+                  var cakes = snapshot.data ?? [];
+                  if (_searchQuery.isNotEmpty) {
                     cakes = cakes
                         .where(
                           (c) => c.name.toLowerCase().contains(
@@ -126,25 +113,123 @@ class _CakeListScreenState extends State<CakeListScreen> {
                           ),
                         )
                         .toList();
+                  }
+                  if (_selectedCategory != 'All') {
+                    cakes = cakes
+                        .where((c) => c.category == _selectedCategory)
+                        .toList();
+                  }
                   cakes.sort(
                     (a, b) => _sortPriceAsc
                         ? a.price.compareTo(b.price)
                         : b.price.compareTo(a.price),
                   );
-                  if (cakes.isEmpty)
-                    return Center(child: Text('Không tìm thấy bánh nào'));
+
+                  if (cakes.isEmpty) {
+                    return Center(child: Text('Không tìm thấy bánh'));
+                  }
+
                   return GridView.builder(
                     padding: EdgeInsets.all(10),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 0.7,
+                      childAspectRatio: 0.78,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                     ),
                     itemCount: cakes.length,
                     itemBuilder: (context, index) {
                       final cake = cakes[index];
-                      return _buildCakeCard(context, cake);
+                      final isFavorite = favoriteProvider.isFavorite(cake.id);
+
+                      return GestureDetector(
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/details',
+                          arguments: cake.id,
+                        ),
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Stack(
+                            children: [
+                              // Hình ảnh + tên
+                              Column(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(12),
+                                    ),
+                                    child: CachedNetworkImage(
+                                      imageUrl: cake.image,
+                                      height: 130,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) =>
+                                          Container(color: Colors.grey[200]),
+                                      errorWidget: (_, __, ___) => Icon(
+                                        Icons.cake,
+                                        size: 50,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 6,
+                                    ),
+                                    child: Text(
+                                      cake.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // Nút yêu thích (chỉ hiện khi đăng nhập)
+                              if (authProvider.user != null)
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(
+                                        isFavorite
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        color: isFavorite
+                                            ? Colors.red
+                                            : Colors.grey,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => favoriteProvider
+                                          .toggleFavorite(cake.id),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
                     },
                   );
                 },
@@ -156,63 +241,42 @@ class _CakeListScreenState extends State<CakeListScreen> {
     );
   }
 
-  Widget _buildCategoryChip(String category) {
-    bool selected = _selectedCategory == category;
-    return Padding(
-      padding: EdgeInsets.only(right: 6),
-      child: ChoiceChip(
-        label: Text(category),
-        selected: selected,
-        onSelected: (_) => setState(() => _selectedCategory = category),
-      ),
-    );
-  }
-
-  Widget _buildCakeCard(BuildContext context, Cake cake) {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/details', arguments: cake.id),
-      child: Card(
-        color: cake.color,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Hero(
-                tag: 'cake-${cake.id}',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: CachedNetworkImage(
-                    imageUrl: cake.image,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: Icon(Icons.cake, size: 50, color: Colors.grey),
-                    ),
-                  ),
-                ),
-              ),
-              Text(cake.name, style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('${cake.price} VNĐ'),
-            ],
+  // Danh sách chip loại bánh
+  List<Widget> _buildCategoryChips() {
+    final categories = [
+      'All',
+      'Socola',
+      'Dâu',
+      'Vani',
+      'Matcha',
+      'Tiramisu',
+      'Chanh Leo',
+      'Red Velvet',
+      'Caramen',
+      'Trái Cây',
+      'Bắp',
+    ];
+    return categories
+        .map(
+          (cat) => Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(cat, style: TextStyle(fontSize: 13)),
+              selected: _selectedCategory == cat,
+              selectedColor: Colors.pink.shade100,
+              checkmarkColor: Colors.pink,
+              onSelected: (_) => setState(() => _selectedCategory = cat),
+            ),
           ),
-        ),
-      ),
-    );
+        )
+        .toList();
   }
 
+  // Drawer menu
   Widget _buildDrawer(BuildContext context, AuthProvider auth) {
     return Drawer(
       child: ListView(
+        padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
             decoration: BoxDecoration(color: Colors.pink),
@@ -221,76 +285,72 @@ class _CakeListScreenState extends State<CakeListScreen> {
               style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
-          ListTile(
-            leading: Icon(Icons.home),
-            title: Text('Trang chủ'),
-            onTap: () => Navigator.pop(context),
+          _drawerTile(Icons.home, 'Trang chủ', () => Navigator.pop(context)),
+          _drawerTile(Icons.favorite, 'Yêu thích', () {
+            if (auth.user == null)
+              Navigator.pushNamed(context, '/login');
+            else
+              Navigator.pushNamed(context, '/favorites');
+          }),
+          _drawerTile(
+            Icons.shopping_cart,
+            'Giỏ hàng',
+            () => Navigator.pushNamed(context, '/cart'),
           ),
-          ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text('Yêu thích'),
-            onTap: () {
-              if (auth.user == null)
-                Navigator.pushNamed(context, '/login');
-              else
-                Navigator.pushNamed(context, '/favorites');
+          _drawerTile(
+            Icons.account_circle,
+            auth.user == null ? 'Đăng nhập' : 'Hồ sơ',
+            () {
+              Navigator.pushNamed(
+                context,
+                auth.user == null ? '/login' : '/profile',
+              );
             },
           ),
-          // GỎI HÀNG CHO PHÉP GUEST
-          ListTile(
-            leading: Icon(Icons.shopping_cart),
-            title: Text('Giỏ hàng'),
-            onTap: () => Navigator.pushNamed(context, '/cart'),
-          ),
-          ListTile(
-            leading: Icon(Icons.account_circle),
-            title: Text(auth.user == null ? 'Đăng nhập' : 'Hồ sơ'),
-            onTap: () => Navigator.pushNamed(
-              context,
-              auth.user == null ? '/login' : '/profile',
-            ),
-          ),
           if (auth.user != null)
-            ListTile(
-              leading: Icon(Icons.history),
-              title: Text('Lịch sử đơn hàng'),
-              onTap: () => Navigator.pushNamed(context, '/orders'),
+            _drawerTile(
+              Icons.history,
+              'Lịch sử đơn hàng',
+              () => Navigator.pushNamed(context, '/orders'),
             ),
-          ListTile(
-            leading: Icon(Icons.search),
-            title: Text('Kiểm tra đơn hàng'),
-            onTap: () => Navigator.pushNamed(context, '/order_status'),
+          _drawerTile(
+            Icons.search,
+            'Kiểm tra đơn hàng',
+            () => Navigator.pushNamed(context, '/order_status'),
           ),
           if (auth.isAdmin) Divider(),
-          if (auth.isAdmin)
-            ListTile(
-              leading: Icon(Icons.add),
-              title: Text('Thêm sản phẩm'),
-              onTap: () => Navigator.push(
+          if (auth.isAdmin) ...[
+            _drawerTile(
+              Icons.add,
+              'Thêm sản phẩm',
+              () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => AdminCakeScreen()),
               ),
             ),
-          if (auth.isAdmin)
-            ListTile(
-              leading: Icon(Icons.bar_chart),
-              title: Text('Biểu đồ doanh thu'),
-              onTap: () => Navigator.push(
+            _drawerTile(
+              Icons.bar_chart,
+              'Biểu đồ doanh thu',
+              () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
               ),
             ),
-          if (auth.isAdmin)
-            ListTile(
-              leading: Icon(Icons.list),
-              title: Text('Quản lý đơn hàng'),
-              onTap: () => Navigator.push(
+            _drawerTile(
+              Icons.list,
+              'Quản lý đơn hàng',
+              () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => AdminOrderManagementScreen()),
               ),
             ),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _drawerTile(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(leading: Icon(icon), title: Text(title), onTap: onTap);
   }
 }

@@ -1,10 +1,10 @@
+// lib/screens/cake_favorites_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/cake.dart';
 import '../services/firebase_service.dart';
 import '../providers/favorite_provider.dart';
-import '../providers/cart_provider.dart';
-import '../providers/auth_provider.dart';
 
 class FavoritesScreen extends StatefulWidget {
   @override
@@ -15,63 +15,133 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   void initState() {
     super.initState();
-    Provider.of<FavoriteProvider>(context, listen: false).fetchFavorites();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<FavoriteProvider>(context, listen: false).fetchFavorites();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final fp = Provider.of<FavoriteProvider>(context);
-    final cp = Provider.of<CartProvider>(context);
-
     return Scaffold(
-      appBar: AppBar(title: Text('Yêu thích')),
-      body: FutureBuilder<List<Cake>>(
-        future: _getFavoriteCakes(fp.favorites),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
-            return Center(child: CircularProgressIndicator());
-          final cakes = snapshot.data ?? [];
-          if (cakes.isEmpty)
-            return Center(child: Text('Chưa có bánh yêu thích'));
-          return GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.7,
-            ),
-            itemCount: cakes.length,
-            itemBuilder: (context, index) {
-              final cake = cakes[index];
-              final isFavorite = true;
-              return GestureDetector(
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  '/details',
-                  arguments: cake.id,
+      appBar: AppBar(
+        title: Text('Yêu thích'),
+        backgroundColor: Colors.pink.shade50,
+      ),
+      body: Consumer<FavoriteProvider>(
+        builder: (context, favProvider, child) {
+          if (favProvider.favorites.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_border, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Chưa có bánh yêu thích',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return FutureBuilder<List<Cake>>(
+            future: _getFavoriteCakes(favProvider.favorites),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(child: Text('Không tải được danh sách'));
+              }
+
+              final cakes = snapshot.data!;
+
+              return GridView.builder(
+                padding: EdgeInsets.all(12),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.75,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
-                child: Card(
-                  color: cake.color,
-                  child: Column(
-                    children: [
-                      Image.network(cake.image, height: 120, fit: BoxFit.cover),
-                      Text(cake.name),
-                      Text('${cake.price} VNĐ'),
-                      Row(
+                itemCount: cakes.length,
+                itemBuilder: (context, index) {
+                  final cake = cakes[index];
+                  final isFavorite = favProvider.isFavorite(cake.id);
+
+                  return Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        '/details',
+                        arguments: cake.id,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            icon: Icon(Icons.add_shopping_cart),
-                            onPressed: () async =>
-                                await cp.addToCart(cake.id, 'Nhỏ', 1),
+                          ClipRRect(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: cake.image,
+                              height: 120,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) =>
+                                  Container(color: Colors.grey[200]),
+                            ),
                           ),
-                          IconButton(
-                            icon: Icon(Icons.favorite, color: Colors.red),
-                            onPressed: () async =>
-                                await fp.toggleFavorite(cake.id),
+                          Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cake.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '${cake.price} VNĐ',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                                SizedBox(height: 8),
+                                // Chỉ giữ nút xóa yêu thích
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: IconButton(
+                                    icon: Icon(
+                                      isFavorite
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      color: isFavorite
+                                          ? Colors.red
+                                          : Colors.grey,
+                                    ),
+                                    onPressed: () async {
+                                      await favProvider.toggleFavorite(cake.id);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -81,10 +151,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<List<Cake>> _getFavoriteCakes(List<String> ids) async {
-    List<Cake> cakes = [];
-    for (var id in ids) {
-      cakes.add(await FirebaseService.getCakeById(id));
-    }
-    return cakes;
+    if (ids.isEmpty) return [];
+    final futures = ids.map((id) => FirebaseService.getCakeById(id));
+    return await Future.wait(futures);
   }
 }
