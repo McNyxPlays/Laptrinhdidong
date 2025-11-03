@@ -14,12 +14,29 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController(); // THÊM SĐT
   final _addressCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   String _payment = 'Tiền mặt';
   bool _done = false;
   String _orderId = '';
-  bool _showTransferInfo = false; // THÊM ĐỂ HIỂN THỊ HƯỚNG DẪN CK
+  bool _showTransferInfo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo(); // TỰ ĐỘNG ĐIỀN KHI MỞ
+  }
+
+  Future<void> _loadUserInfo() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.user != null) {
+      final profile = await FirebaseService.getProfile();
+      _nameCtrl.text = profile['name'] ?? '';
+      _phoneCtrl.text = profile['phone'] ?? ''; // LẤY SĐT
+      _addressCtrl.text = profile['address'] ?? '';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,8 +70,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 SizedBox(height: 16),
                 SelectableText(
                   'Mã đơn: $_orderId',
-                  style: TextStyle(fontSize: 18, color: Colors.black87),
-                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18),
                 ),
                 SizedBox(height: 32),
                 ElevatedButton.icon(
@@ -62,36 +78,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     await Clipboard.setData(ClipboardData(text: _orderId));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Đã sao chép mã đơn: $_orderId'),
+                        content: Text('Đã sao chép: $_orderId'),
                         backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
                       ),
                     );
                   },
-                  icon: Icon(Icons.copy, size: 20),
+                  icon: Icon(Icons.copy),
                   label: Text('Sao chép mã'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
                   ),
                 ),
                 SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () =>
                       Navigator.popUntil(context, (route) => route.isFirst),
-                  icon: Icon(Icons.home, size: 20),
+                  icon: Icon(Icons.home),
                   label: Text('Về trang chủ'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
                   ),
                 ),
               ],
@@ -116,33 +123,81 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     controller: _nameCtrl,
                     decoration: InputDecoration(
                       labelText: 'Họ tên',
-                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
                     ),
                     validator: (v) => v!.isEmpty ? 'Bắt buộc' : null,
                   ),
+                if (!isLoggedIn) SizedBox(height: 12),
+
+                // SĐT - BẮT BUỘC DÙ ĐÃ LOGIN
+                TextFormField(
+                  controller: _phoneCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Số điện thoại',
+                    prefixIcon: Icon(Icons.phone),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập số điện thoại';
+                    }
+                    if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+                      return 'SĐT phải có đúng 10 chữ số';
+                    }
+                    return null;
+                  },
+                ),
                 SizedBox(height: 12),
+
+                // Địa chỉ
                 TextFormField(
                   controller: _addressCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Địa chỉ',
-                    border: OutlineInputBorder(),
+                    labelText: 'Địa chỉ giao hàng',
+                    prefixIcon: Icon(Icons.location_on),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
                   ),
                   validator: (v) => v!.isEmpty ? 'Bắt buộc' : null,
                 ),
                 SizedBox(height: 12),
+
                 TextFormField(
                   controller: _noteCtrl,
                   decoration: InputDecoration(
                     labelText: 'Ghi chú (không bắt buộc)',
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.note),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
                   ),
                 ),
                 SizedBox(height: 12),
+
                 DropdownButtonFormField<String>(
                   value: _payment,
                   decoration: InputDecoration(
                     labelText: 'Phương thức thanh toán',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
                   ),
                   items: [
                     DropdownMenuItem(
@@ -151,18 +206,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     DropdownMenuItem(
                       value: 'Chuyển khoản',
-                      child: Text('Chuyển khoản'),
+                      child: Text('Chuyển khoản ngân hàng'),
                     ),
                   ],
                   onChanged: (v) {
                     setState(() {
                       _payment = v!;
-                      _showTransferInfo =
-                          v == 'Chuyển khoản'; // HIỂN THỊ HƯỚNG DẪN
+                      _showTransferInfo = v == 'Chuyển khoản';
                     });
                   },
                 ),
-                if (_showTransferInfo) // THÊM PHẦN HƯỚNG DẪN CK
+
+                if (_showTransferInfo)
                   Padding(
                     padding: EdgeInsets.only(top: 12),
                     child: Card(
@@ -177,15 +232,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 8),
-                            Text('Ngân hàng: Vietcombank'),
-                            Text('Số TK: 1234567890'),
-                            Text('Tên TK: Cửa Hàng Bánh Kem'),
-                            Text(
-                              'Nội dung: CK mã đơn (sẽ hiển thị sau khi hoàn tất)',
-                            ),
+                            Text('• Ngân hàng: Vietcombank'),
+                            Text('• Số TK: 1234567890'),
+                            Text('• Tên TK: Cửa Hàng Bánh Kem'),
+                            Text('• Nội dung: $_orderId (sau khi tạo đơn)'),
                             SizedBox(height: 8),
                             Text(
-                              'Sau khi CK, quay lại app để hoàn tất.',
+                              'Sau khi chuyển, quay lại app để hoàn tất.',
                               style: TextStyle(color: Colors.red),
                             ),
                           ],
@@ -193,6 +246,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     ),
                   ),
+
                 SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () async {
@@ -203,6 +257,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         total: cp.total,
                         name: name,
                         address: _addressCtrl.text,
+                        phone: _phoneCtrl.text,
                         note: _noteCtrl.text,
                         paymentMethod: _payment,
                       );
@@ -210,11 +265,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       setState(() => _done = true);
                     }
                   },
-                  child: Text('Hoàn tất đơn hàng'),
+                  child: Text(
+                    'Hoàn tất đơn hàng',
+                    style: TextStyle(fontSize: 18),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
-                    padding: EdgeInsets.all(16),
-                    textStyle: TextStyle(fontSize: 18),
+                    padding: EdgeInsets.all(18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],

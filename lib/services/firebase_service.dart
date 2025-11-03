@@ -183,6 +183,7 @@ class FirebaseService {
     required int total,
     String? name,
     required String address,
+    required String phone, // THÊM PHONE
     String? note,
     required String paymentMethod,
   }) async {
@@ -191,6 +192,7 @@ class FirebaseService {
       'orderId': orderId,
       'userId': currentUser?.uid,
       'name': name ?? (await getProfile())['name'],
+      'phone': phone, // LƯU SĐT
       'address': address,
       'note': note,
       'paymentMethod': paymentMethod,

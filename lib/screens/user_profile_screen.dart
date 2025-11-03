@@ -37,6 +37,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _updateProfile() async {
+    if (_nameCtrl.text.isEmpty ||
+        _phoneCtrl.text.isEmpty ||
+        _addressCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vui lòng điền đầy đủ thông tin!')),
+      );
+      return;
+    }
+
     await FirebaseService.updateProfile({
       'name': _nameCtrl.text,
       'phone': _phoneCtrl.text,
@@ -76,7 +85,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('Đổi mật khẩu thành công!')));
 
-      // Xóa form
       _oldPasswordCtrl.clear();
       _newPasswordCtrl.clear();
       _confirmNewPasswordCtrl.clear();
@@ -105,22 +113,64 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             // Thông tin cá nhân
             TextField(
               controller: _nameCtrl,
-              decoration: InputDecoration(labelText: 'Họ tên'),
+              decoration: InputDecoration(
+                labelText: 'Họ tên',
+                prefixIcon: Icon(Icons.person),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
             ),
             SizedBox(height: 12),
-            TextField(
+            TextFormField(
               controller: _phoneCtrl,
-              decoration: InputDecoration(labelText: 'SĐT'),
+              decoration: InputDecoration(
+                labelText: 'Số điện thoại',
+                prefixIcon: Icon(Icons.phone),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Vui lòng nhập số điện thoại';
+                }
+                if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+                  return 'SĐT phải có đúng 10 chữ số';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 12),
             TextField(
               controller: _addressCtrl,
-              decoration: InputDecoration(labelText: 'Địa chỉ'),
+              decoration: InputDecoration(
+                labelText: 'Địa chỉ',
+                prefixIcon: Icon(Icons.location_on),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
             ),
             SizedBox(height: 16),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _updateProfile,
-              child: Text('Cập nhật hồ sơ'),
+              icon: Icon(Icons.save),
+              label: Text('Cập nhật hồ sơ'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pink,
+                padding: EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
 
             Divider(height: 40, thickness: 1),
@@ -136,12 +186,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               obscureText: _obscureOld,
               decoration: InputDecoration(
                 labelText: 'Mật khẩu cũ',
+                prefixIcon: Icon(Icons.lock),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureOld ? Icons.visibility_off : Icons.visibility,
                   ),
                   onPressed: () => setState(() => _obscureOld = !_obscureOld),
                 ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
               ),
             ),
             SizedBox(height: 12),
@@ -150,12 +206,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               obscureText: _obscureNew,
               decoration: InputDecoration(
                 labelText: 'Mật khẩu mới',
+                prefixIcon: Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureNew ? Icons.visibility_off : Icons.visibility,
                   ),
                   onPressed: () => setState(() => _obscureNew = !_obscureNew),
                 ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
               ),
             ),
             SizedBox(height: 12),
@@ -164,6 +226,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               obscureText: _obscureConfirm,
               decoration: InputDecoration(
                 labelText: 'Nhập lại mật khẩu mới',
+                prefixIcon: Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureConfirm ? Icons.visibility_off : Icons.visibility,
@@ -171,20 +234,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   onPressed: () =>
                       setState(() => _obscureConfirm = !_obscureConfirm),
                 ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
               ),
             ),
             SizedBox(height: 16),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _changePassword,
-              child: Text('Đổi mật khẩu'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              icon: Icon(Icons.key),
+              label: Text('Đổi mật khẩu'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                padding: EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
 
             SizedBox(height: 24),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _logout,
-              child: Text('Đăng xuất'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              icon: Icon(Icons.logout),
+              label: Text('Đăng xuất'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ],
         ),
